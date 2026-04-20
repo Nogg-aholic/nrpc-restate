@@ -1,0 +1,55 @@
+{
+  "name": "@nogg-aholic/nrpc-restate",
+  "version": "0.1.0",
+  "description": "Helpers to register and bind Restate services, virtual objects, and workflows",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
+  },
+  "keywords": [
+    "restate",
+    "service",
+    "workflow",
+    "typescript",
+    "nrpc"
+  ],
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "build": "bunx tsc -p ./tsconfig.json",
+    "prepack": "bun run build"
+  },
+  "devDependencies": {
+    "@nogg-aholic/nrpc": "latest",
+    "@restatedev/restate-sdk": "^1.13.0",
+    "@types/bun": "^1.3.12",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@nogg-aholic/nrpc": ">=0.4.0",
+    "@restatedev/restate-sdk": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nogg-aholic/nrpc": {
+      "optional": true
+    },
+    "@restatedev/restate-sdk": {
+      "optional": true
+    }
+  }
+}
