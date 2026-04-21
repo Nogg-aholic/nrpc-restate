@@ -12,6 +12,9 @@ export interface StartRegisteredRestateDeploymentOptions {
   restateAdminBaseUrl?: string;
   restateDeploymentUri?: string;
   autoRegister?: boolean;
+  forceReRegister?: boolean;
+  deploymentRetryIntervalFactor?: number;
+  deploymentMaxRetryAttempts?: number;
   enabled?: boolean;
   env?: Record<string, string | undefined>;
   log?: (message: string) => void;
@@ -34,6 +37,18 @@ type DeploymentServiceInfo = {
 type DeploymentInfo = {
   id?: string;
   services?: DeploymentServiceInfo[];
+};
+
+type RegisterDeploymentPayload = {
+  uri: string;
+  force: boolean;
+  use_http_11: boolean;
+  retry_policy?: {
+    initial_interval?: string;
+    factor?: number;
+    max_interval?: string;
+    max_attempts?: number;
+  };
 };
 
 function parseEnabled(value: string | undefined, fallback: boolean): boolean {
@@ -130,6 +145,9 @@ async function ensureRegisteredDeployment(options: {
   adminBaseUrl: string;
   deploymentUri: string;
   serviceNames: string[];
+  forceReRegister?: boolean;
+  deploymentRetryIntervalFactor?: number;
+  deploymentMaxRetryAttempts?: number;
   authHeader?: string;
   log?: (message: string) => void;
 }): Promise<void> {
@@ -159,20 +177,50 @@ async function ensureRegisteredDeployment(options: {
   );
 
   if (existing) {
+    if (options.forceReRegister && existing.id) {
+      const deleteResponse = await fetch(`${listUrl}/${existing.id}`, {
+        method: 'DELETE',
+        headers: requestHeaders,
+      });
+
+      if (!deleteResponse.ok) {
+        const body = await readBodyText(deleteResponse);
+        throw new Error(`DELETE /deployments/${existing.id} failed (${deleteResponse.status}) ${body}`.trim());
+      }
+
+      options.log?.(
+        `[nrpc-restate] Deployment unregistered (id=${existing.id}) for services: ${options.serviceNames.join(', ')}`,
+      );
+    } else {
     options.log?.(
       `[nrpc-restate] Deployment already registered (id=${existing.id ?? 'unknown'}) for services: ${options.serviceNames.join(', ')}`,
     );
     return;
+    }
+  }
+
+  const registerPayload: RegisterDeploymentPayload = {
+    uri: options.deploymentUri,
+    force: !!options.forceReRegister,
+    use_http_11: true,
+  };
+
+  if (
+    typeof options.deploymentRetryIntervalFactor === 'number'
+    || typeof options.deploymentMaxRetryAttempts === 'number'
+  ) {
+    registerPayload.retry_policy = {
+      initial_interval: '1s',
+      factor: options.deploymentRetryIntervalFactor,
+      max_interval: '1s',
+      max_attempts: options.deploymentMaxRetryAttempts,
+    };
   }
 
   const registerResponse = await fetch(listUrl, {
     method: 'POST',
     headers: requestHeaders,
-    body: JSON.stringify({
-      uri: options.deploymentUri,
-      force: false,
-      use_http_11: true,
-    }),
+    body: JSON.stringify(registerPayload),
   });
 
   if (!registerResponse.ok) {
@@ -191,6 +239,9 @@ function startAutoRegistration(options: {
   adminBaseUrl: string;
   deploymentUri: string;
   serviceNames: string[];
+  forceReRegister?: boolean;
+  deploymentRetryIntervalFactor?: number;
+  deploymentMaxRetryAttempts?: number;
   authHeader?: string;
   log?: (message: string) => void;
 }): void {
@@ -294,6 +345,9 @@ export function startRegisteredRestateDeployment(
       adminBaseUrl,
       deploymentUri,
       serviceNames: componentNames,
+      forceReRegister: options.forceReRegister,
+      deploymentRetryIntervalFactor: options.deploymentRetryIntervalFactor,
+      deploymentMaxRetryAttempts: options.deploymentMaxRetryAttempts,
       authHeader,
       log: options.log,
     });

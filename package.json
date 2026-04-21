@@ -1,6 +1,6 @@
 {
   "name": "@nogg-aholic/nrpc-restate",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Helpers to register and bind Restate services, virtual objects, and workflows",
   "license": "MIT",
   "type": "module",
