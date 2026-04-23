@@ -178,14 +178,17 @@ async function ensureRegisteredDeployment(options: {
 
   if (existing) {
     if (options.forceReRegister && existing.id) {
-      const deleteResponse = await fetch(`${listUrl}/${existing.id}`, {
+      const deleteUrl = new URL(`${listUrl}/${existing.id}`);
+      deleteUrl.searchParams.set('force', 'true');
+
+      const deleteResponse = await fetch(deleteUrl.toString(), {
         method: 'DELETE',
         headers: requestHeaders,
       });
 
       if (!deleteResponse.ok) {
         const body = await readBodyText(deleteResponse);
-        throw new Error(`DELETE /deployments/${existing.id} failed (${deleteResponse.status}) ${body}`.trim());
+        throw new Error(`DELETE /deployments/${existing.id}?force=true failed (${deleteResponse.status}) ${body}`.trim());
       }
 
       options.log?.(
